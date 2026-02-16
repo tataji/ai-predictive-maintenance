@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Predictive Maintenance System - Production</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .header-subtitle {
+            margin-top: 5px;
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .stat-box {
+            text-align: center;
+            min-width: 100px;
+        }
+
+        .stat-box .label {
+            font-size: 11px;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-box .value {
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.2);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .live-dot.disconnected {
+            background: #ef4444;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .main-content {
+            padding: 30px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1e3c72;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .control-button {
+            padding: 10px 20px;
+            border: 2px solid #e5e7eb;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .control-button:hover {
+            background: #f3f4f6;
+        }
+
+        .control-button.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+
+        .equipment-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .equipment-card {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .equipment-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .equipment-card.warning {
+            border-color: #f59e0b;
+            background: linear-gradient(to bottom, #fffbeb, white);
+        }
+
+        .equipment-card.critical {
+            border-color: #ef4444;
+            background: linear-gradient(to bottom, #fef2f2, white);
+            animation: criticalPulse 2s infinite;
+        }
+
+        .equipment-card.healthy {
+            border-color: #10b981;
+            background: linear-gradient(to bottom, #f0fdf4, white);
+        }
+
+        @keyframes criticalPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 20px 5px rgba(239, 68, 68, 0.2); }
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .equipment-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .equipment-type {
+            font-size: 12px;
+            color: #6b7280;
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-badge.healthy {
+            background: #10b981;
+            color: white;
+        }
+
+        .status-badge.warning {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .status-badge.critical {
+            background: #ef4444;
+            color: white;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .metric {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .metric-label {
+            font-size: 11px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-top: 3px;
+        }
+
+        .metric-unit {
+            font-size: 12px;
+            font-weight: 400;
+            color: #6b7280;
+        }
+
+        .ai-prediction {
+            background: #f3f4f6;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 12px;
+        }
+
+        .prediction-label {
+            font-size: 11px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .prediction-text {
+            font-size: 13px;
+            color: #1f2937;
+            line-height: 1.5;
+        }
+
+        .confidence-bar {
+            margin-top: 8px;
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #3b82f6);
+            transition: width 0.5s ease;
+        }
+
+        .confidence-fill.warning {
+            background: linear-gradient(90deg, #f59e0b, #fb923c);
+        }
+
+        .confidence-fill.critical {
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .chart-box {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .alerts-section {
+            background: #f9fafb;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 40px;
+        }
+
+        .alert-item {
+            background: white;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+
+        .alert-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .alert-item.warning {
+            border-left-color: #f59e0b;
+        }
+
+        .alert-item.critical {
+            border-left-color: #ef4444;
+        }
+
+        .alert-content {
+            flex: 1;
+        }
+
+        .alert-title {
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 5px;
+        }
+
+        .alert-description {
+            font-size: 14px;
+            color: #6b7280;
+            line-height: 1.4;
+        }
+
+        .alert-meta {
+            display: flex;
+            gap: 15px;
+            margin-top: 8px;
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        .action-button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+
+        .action-button:hover {
+            background: #2563eb;
+        }
+
+        .action-button.secondary {
+            background: #6b7280;
+        }
+
+        .action-button.secondary:hover {
+            background: #4b5563;
+        }
+
+        .maintenance-schedule {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 40px;
+        }
+
+        .schedule-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #e5e7eb;
+            transition: background 0.2s;
+        }
+
+        .schedule-item:hover {
+            background: #f9fafb;
+        }
+
+        .schedule-item:last-child {
+            border-bottom: none;
+        }
+
+        .schedule-info {
+            flex: 1;
+        }
+
+        .schedule-equipment {
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 3px;
+        }
+
+        .schedule-task {
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        .schedule-priority {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .schedule-priority.high {
+            background: #fef2f2;
+            color: #ef4444;
+        }
+
+        .schedule-priority.medium {
+            background: #fffbeb;
+            color: #f59e0b;
+        }
+
+        .schedule-priority.low {
+            background: #f0fdf4;
+            color: #10b981;
+        }
+
+        .schedule-date {
+            font-size: 14px;
+            color: #3b82f6;
+            font-weight: 500;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+
+        .spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+
+        .connection-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            z-index: 1000;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1f2937;
+        }
+
+        .modal-close {
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #6b7280;
+        }
+
+        .modal-close:hover {
+            color: #1f2937;
+        }
+
+        @media (max-width: 768px) {
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .header-stats {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .equipment-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .alert-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>🔧 AI Predictive Maintenance System</h1>
+                <div class="header-subtitle">Real-time Equipment Monitoring & ML-Based Failure Prediction</div>
+            </div>
+            <div class="header-stats">
+                <div class="stat-box">
+                    <div class="label">Equipment Online</div>
+                    <div class="value" id="equipmentOnline">--/--</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Active Alerts</div>
+                    <div class="value" id="activeAlerts">--</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Cost Saved MTD</div>
+                    <div class="value" id="costSaved">$--</div>
+                </div>
+                <div class="live-indicator">
+                    <div class="live-dot" id="liveDot"></div>
+                    <span id="connectionText">Connecting...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="controls">
+                <button class="control-button active" onclick="filterEquipment('all')">All Equipment</button>
+                <button class="control-button" onclick="filterEquipment('critical')">Critical Alerts</button>
+                <button class="control-button" onclick="filterEquipment('warning')">Warnings</button>
+                <button class="control-button" onclick="filterEquipment('healthy')">Healthy</button>
+                <button class="control-button" onclick="refreshData()">🔄 Refresh</button>
+            </div>
+
+            <div class="section-title">
+                📊 Equipment Status Overview
+            </div>
+            <div class="equipment-grid" id="equipmentGrid">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <div>Loading equipment data...</div>
+                </div>
+            </div>
+
+            <div class="section-title">
+                📈 Performance Analytics
+            </div>
+            <div class="charts-container">
+                <div class="chart-box">
+                    <div id="temperatureChart"></div>
+                </div>
+                <div class="chart-box">
+                    <div id="vibrationChart"></div>
+                </div>
+                <div class="chart-box">
+                    <div id="efficiencyChart"></div>
+                </div>
+            </div>
+
+            <div class="section-title">
+                🚨 Active Alerts & Recommendations
+            </div>
+            <div class="alerts-section" id="alertsSection">
+                <div class="loading">Loading alerts...</div>
+            </div>
+
+            <div class="section-title">
+                📅 Upcoming Maintenance Schedule
+            </div>
+            <div class="maintenance-schedule" id="maintenanceSchedule">
+                <div class="loading">Loading maintenance schedule...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="connection-status" id="connectionStatus" style="display: none;">
+        <div class="live-dot" id="statusDot"></div>
+        <span id="statusText">Connected</span>
+    </div>
+
+    <!-- Equipment Detail Modal -->
+    <div class="modal" id="equipmentModal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <div class="modal-header" id="modalTitle">Equipment Details</div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:8000'
+            : 'http://localhost:8000'; // Update for production
+
+        let ws = null;
+        let equipmentData = [];
+        let alertsData = [];
+        let currentFilter = 'all';
+        let reconnectAttempts = 0;
+        const MAX_RECONNECT_ATTEMPTS = 5;
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeWebSocket();
+            loadDashboardData();
+            setInterval(loadDashboardData, 30000); // Refresh every 30 seconds
+        });
+
+        // WebSocket connection
+        function initializeWebSocket() {
+            const wsUrl = API_BASE_URL.replace('http', 'ws') + '/ws';
+            
+            try {
+                ws = new WebSocket(wsUrl);
+                
+                ws.onopen = () => {
+                    console.log('WebSocket connected');
+                    updateConnectionStatus(true);
+                    reconnectAttempts = 0;
+                };
+                
+                ws.onmessage = (event) => {
+                    const message = JSON.parse(event.data);
+                    handleWebSocketMessage(message);
+                };
+                
+                ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    updateConnectionStatus(false);
+                };
+                
+                ws.onclose = () => {
+                    console.log('WebSocket disconnected');
+                    updateConnectionStatus(false);
+                    attemptReconnect();
+                };
+            } catch (error) {
+                console.error('Failed to create WebSocket:', error);
+                updateConnectionStatus(false);
+            }
+        }
+
+        function attemptReconnect() {
+            if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                reconnectAttempts++;
+                console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+                setTimeout(initializeWebSocket, 3000 * reconnectAttempts);
+            }
+        }
+
+        function handleWebSocketMessage(message) {
+            console.log('WebSocket message:', message);
+            
+            if (message.type === 'alert') {
+                // Refresh alerts when new alert comes in
+                loadAlerts();
+                loadDashboardStats();
+            } else if (message.type === 'status_update') {
+                // Update equipment status
+                if (message.data) {
+                    loadEquipment();
+                }
+            }
+        }
+
+        function updateConnectionStatus(connected) {
+            const liveDot = document.getElementById('liveDot');
+            const connectionText = document.getElementById('connectionText');
+            
+            if (connected) {
+                liveDot.classList.remove('disconnected');
+                connectionText.textContent = 'Live Data';
+            } else {
+                liveDot.classList.add('disconnected');
+                connectionText.textContent = 'Disconnected';
+            }
+        }
+
+        // API calls
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            };
+            
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error(`API call failed for ${endpoint}:`, error);
+                return null;
+            }
+        }
+
+        async function loadDashboardData() {
+            await Promise.all([
+                loadDashboardStats(),
+                loadEquipment(),
+                loadAlerts(),
+                loadMaintenance()
+            ]);
+        }
+
+        async function loadDashboardStats() {
+            const stats = await apiCall('/api/dashboard-stats');
+            if (stats) {
+                document.getElementById('equipmentOnline').textContent = stats.equipment_online;
+                document.getElementById('activeAlerts').textContent = stats.active_alerts;
+                document.getElementById('costSaved').textContent = stats.cost_saved_mtd;
+            }
+        }
+
+        async function loadEquipment() {
+            const data = await apiCall('/api/equipment');
+            if (data && data.equipment) {
+                equipmentData = data.equipment;
+                renderEquipment();
+                updateCharts();
+            }
+        }
+
+        async function loadAlerts() {
+            const data = await apiCall('/api/alerts?acknowledged=false');
+            if (data && data.alerts) {
+                alertsData = data.alerts;
+                renderAlerts();
+            }
+        }
+
+        async function loadMaintenance() {
+            const data = await apiCall('/api/maintenance');
+            if (data && data.schedule) {
+                renderMaintenance(data.schedule);
+            }
+        }
+
+        // Render functions
+        function renderEquipment() {
+            const grid = document.getElementById('equipmentGrid');
+            const filtered = currentFilter === 'all' 
+                ? equipmentData 
+                : equipmentData.filter(eq => eq.status === currentFilter);
+            
+            if (filtered.length === 0) {
+                grid.innerHTML = '<div class="empty-state">No equipment matches the selected filter</div>';
+                return;
+            }
+            
+            grid.innerHTML = filtered.map(eq => `
+                <div class="equipment-card ${eq.status}" onclick="showEquipmentDetail(${eq.id})">
+                    <div class="card-header">
+                        <div>
+                            <div class="equipment-name">${eq.name}</div>
+                            <div class="equipment-type">${eq.type}</div>
+                        </div>
+                        <div class="status-badge ${eq.status}">${eq.status}</div>
+                    </div>
+                    <div class="metrics">
+                        <div class="metric">
+                            <div class="metric-label">Last Check</div>
+                            <div class="metric-value" style="font-size: 14px;">
+                                ${eq.last_maintenance ? new Date(eq.last_maintenance).toLocaleDateString() : 'N/A'}
+                            </div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Alerts</div>
+                            <div class="metric-value">${eq.alert_count || 0}</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Location</div>
+                            <div class="metric-value" style="font-size: 14px;">${eq.location || 'N/A'}</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Type</div>
+                            <div class="metric-value" style="font-size: 14px;">${eq.type}</div>
+                        </div>
+                    </div>
+                    <div class="ai-prediction">
+                        <div class="prediction-label">
+                            🤖 ML Status
+                        </div>
+                        <div class="prediction-text">
+                            ${eq.status === 'critical' ? 'Anomaly detected - immediate attention required' :
+                              eq.status === 'warning' ? 'Minor deviations detected - monitoring' :
+                              'Operating normally - all parameters within range'}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderAlerts() {
+            const section = document.getElementById('alertsSection');
+            
+            if (alertsData.length === 0) {
+                section.innerHTML = '<div class="empty-state">No active alerts 🎉</div>';
+                return;
+            }
+            
+            section.innerHTML = alertsData.map(alert => {
+                const timeAgo = getTimeAgo(new Date(alert.timestamp));
+                return `
+                    <div class="alert-item ${alert.severity}">
+                        <div class="alert-content">
+                            <div class="alert-title">${alert.title}</div>
+                            <div class="alert-description">${alert.description}</div>
+                            <div class="alert-meta">
+                                <span>📍 ${alert.equipment_name}</span>
+                                <span>🕐 ${timeAgo}</span>
+                                <span>⚠️ ${alert.severity.toUpperCase()}</span>
+                            </div>
+                        </div>
+                        <button class="action-button" onclick="acknowledgeAlert(${alert.id})">
+                            Acknowledge
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderMaintenance(schedule) {
+            const section = document.getElementById('maintenanceSchedule');
+            
+            if (schedule.length === 0) {
+                section.innerHTML = '<div class="empty-state">No scheduled maintenance</div>';
+                return;
+            }
+            
+            section.innerHTML = schedule.map(item => `
+                <div class="schedule-item">
+                    <div class="schedule-info">
+                        <div class="schedule-equipment">
+                            ${item.equipment_name}
+                            <span class="schedule-priority ${item.priority}">${item.priority}</span>
+                        </div>
+                        <div class="schedule-task">${item.task}</div>
+                    </div>
+                    <div class="schedule-date">${new Date(item.scheduled_date).toLocaleDateString()}</div>
+                </div>
+            `).join('');
+        }
+
+        async function updateCharts() {
+            // For now, create placeholder charts
+            // In production, these would pull real sensor data from the API
+            
+            const temperatureData = [{
+                x: Array.from({length: 24}, (_, i) => new Date(Date.now() - (23-i) * 3600000)),
+                y: Array.from({length: 24}, () => 65 + Math.random() * 15),
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Average Temperature',
+                line: { color: '#3b82f6', width: 2 }
+            }];
+
+            const temperatureLayout = {
+                title: 'Temperature Trends (24h)',
+                xaxis: { title: 'Time' },
+                yaxis: { title: 'Temperature (°C)' },
+                margin: { t: 40, r: 20, b: 40, l: 50 },
+                height: 300,
+                showlegend: true
+            };
+
+            Plotly.newPlot('temperatureChart', temperatureData, temperatureLayout, {responsive: true});
+
+            const vibrationData = [{
+                x: Array.from({length: 24}, (_, i) => new Date(Date.now() - (23-i) * 3600000)),
+                y: Array.from({length: 24}, () => 2 + Math.random() * 4),
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Average Vibration',
+                line: { color: '#10b981', width: 2 }
+            }];
+
+            const vibrationLayout = {
+                title: 'Vibration Analysis (24h)',
+                xaxis: { title: 'Time' },
+                yaxis: { title: 'Vibration (mm/s)' },
+                margin: { t: 40, r: 20, b: 40, l: 50 },
+                height: 300,
+                showlegend: true
+            };
+
+            Plotly.newPlot('vibrationChart', vibrationData, vibrationLayout, {responsive: true});
+
+            const efficiencyData = [{
+                x: Array.from({length: 24}, (_, i) => new Date(Date.now() - (23-i) * 3600000)),
+                y: Array.from({length: 24}, () => 85 + Math.random() * 12),
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Average Efficiency',
+                line: { color: '#f59e0b', width: 2 },
+                fill: 'tozeroy'
+            }];
+
+            const efficiencyLayout = {
+                title: 'Equipment Efficiency (24h)',
+                xaxis: { title: 'Time' },
+                yaxis: { title: 'Efficiency (%)' },
+                margin: { t: 40, r: 20, b: 40, l: 50 },
+                height: 300,
+                showlegend: true
+            };
+
+            Plotly.newPlot('efficiencyChart', efficiencyData, efficiencyLayout, {responsive: true});
+        }
+
+        // Event handlers
+        function filterEquipment(status) {
+            currentFilter = status;
+            
+            // Update button states
+            document.querySelectorAll('.control-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            renderEquipment();
+        }
+
+        async function showEquipmentDetail(equipmentId) {
+            const modal = document.getElementById('equipmentModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            
+            modalBody.innerHTML = '<div class="loading"><div class="spinner"></div>Loading details...</div>';
+            modal.classList.add('active');
+            
+            const data = await apiCall(`/api/equipment/${equipmentId}`);
+            
+            if (data) {
+                const eq = data.equipment;
+                const prediction = data.latest_prediction;
+                
+                modalTitle.textContent = eq.name;
+                modalBody.innerHTML = `
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 10px;">Equipment Information</h3>
+                        <p><strong>Type:</strong> ${eq.type}</p>
+                        <p><strong>Location:</strong> ${eq.location || 'N/A'}</p>
+                        <p><strong>Status:</strong> <span class="status-badge ${eq.status}">${eq.status}</span></p>
+                        <p><strong>Installed:</strong> ${new Date(eq.install_date).toLocaleDateString()}</p>
+                        <p><strong>Last Maintenance:</strong> ${new Date(eq.last_maintenance).toLocaleDateString()}</p>
+                    </div>
+                    ${prediction ? `
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 10px;">Latest AI Prediction</h3>
+                        <p><strong>Confidence:</strong> ${prediction.confidence.toFixed(1)}%</p>
+                        <p><strong>Recommendation:</strong> ${prediction.recommendation}</p>
+                        ${prediction.predicted_failure_date ? `<p><strong>Predicted Issue Date:</strong> ${new Date(prediction.predicted_failure_date).toLocaleDateString()}</p>` : ''}
+                    </div>
+                    ` : ''}
+                    <div>
+                        <h3 style="margin-bottom: 10px;">Recent Sensor Readings</h3>
+                        <p style="color: #6b7280;">Historical data available through API</p>
+                    </div>
+                `;
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('equipmentModal').classList.remove('active');
+        }
+
+        async function acknowledgeAlert(alertId) {
+            const result = await apiCall(`/api/alerts/${alertId}/acknowledge`, 'POST');
+            if (result && result.status === 'success') {
+                await loadAlerts();
+                await loadDashboardStats();
+            }
+        }
+
+        async function refreshData() {
+            await loadDashboardData();
+        }
+
+        // Utility functions
+        function getTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            
+            if (seconds < 60) return 'Just now';
+            if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+            if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+            return `${Math.floor(seconds / 86400)} days ago`;
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('equipmentModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html>
